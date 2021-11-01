@@ -72,7 +72,7 @@ func main() {
 			j++
 		}
 		values := []string{}
-		for k := i; k < j; k++ {
+		for k := i; k < j; k++ { // sliding windows
 			values = append(values, intermediate[k].Value)
 		}
 		output := reducef(intermediate[i].Key, values)
