@@ -80,7 +80,7 @@ func Worker(mapf func(string, string) []KeyValue,
 			for i := 0; i < nReduce; i++ {
 				tmpfile, err := ioutil.TempFile("", "")
 				if err != nil {
-					log.Fatalf("Cannot open temp file")
+					log.Fatalf("Cannot create temp file")
 				}
 				enc := json.NewEncoder(tmpfile)
 				for _, kv := range mapBucket[i] {
@@ -90,8 +90,10 @@ func Worker(mapf func(string, string) []KeyValue,
 					}
 				}
 				os.Rename(tmpfile.Name(), fmt.Sprintf("tmp-map-%v-%v", taskId, i))
+				// fmt.Println(fmt.Sprintf("tmp-map-%v-%v", taskId, i))
 				tmpfile.Close()
 			}
+
 		} else if taskType == "reduce" {
 			mapTaskNum := 8
 
@@ -113,7 +115,7 @@ func Worker(mapf func(string, string) []KeyValue,
 					kva = append(kva, kv)
 				}
 				// fmt.Println(tmpMapFileName)
-				os.Remove(tmpMapFileName)
+				// os.Remove(tmpMapFileName)
 			}
 
 			sort.Sort(ByKey(kva))
@@ -150,7 +152,12 @@ func Worker(mapf func(string, string) []KeyValue,
 			// fmt.Println(oname)
 			tmpfile.Close()
 		}
+		args = TaskArgs{}
+		args.CurrTask = reply.CurrTask
 
+		if call("Master.FinishTask", &args, &reply) == false {
+			break
+		}
 	}
 
 

@@ -152,7 +152,7 @@ fi
 wait ; wait
 
 
-# generate the correct output
+## generate the correct output
 ../mrsequential ../../mrapps/nocrash.so ../pg*txt || exit 1
 sort mr-out-0 > mr-correct-crash.txt
 rm -f mr-out*
@@ -163,12 +163,15 @@ rm -f mr-done
 (timeout -k 2s 180s ../mrmaster ../pg*txt ; touch mr-done ) &
 sleep 1
 
+
 # start multiple workers
 timeout -k 2s 180s ../mrworker ../../mrapps/crash.so &
 
 # mimic rpc.go's masterSock()
 SOCKNAME=/var/tmp/824-mr-`id -u`
 
+# touch mr-done will be created after master ends
+# only re-create worker if master does not end, i.e. mr-done does not exist
 ( while [ -e $SOCKNAME -a ! -f mr-done ]
   do
     timeout -k 2s 180s ../mrworker ../../mrapps/crash.so
