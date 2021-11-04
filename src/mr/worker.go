@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sort"
 	"strconv"
 )
 import "log"
@@ -94,7 +93,7 @@ func Worker(mapf func(string, string) []KeyValue,
 			}
 
 		} else if _type == REDUCE {
-			kva := []KeyValue{}
+			mapkv := map[string][]string{}
 
 			for i := 0; i < nMap; i++ {
 				tmpMapFileName := GetMapTempName(strconv.Itoa(i), taskId)
@@ -110,11 +109,9 @@ func Worker(mapf func(string, string) []KeyValue,
 					if err := dec.Decode(&kv); err != nil {
 						break
 					}
-					kva = append(kva, kv)
+					mapkv[kv.Key] = append(mapkv[kv.Key], kv.Value)
 				}
 			}
-
-			sort.Sort(ByKey(kva))
 
 			oName := GetOutputName(taskId)
 			tmpFile, err := ioutil.TempFile("", "")
@@ -123,42 +120,21 @@ func Worker(mapf func(string, string) []KeyValue,
 				log.Fatalf("Cannot open temp file")
 			}
 
-			//
-			// call Reduce on each distinct key in intermediate[],
-			// and print the result to mr-out-0.
-			//
-			// TODO: construct map[key] = list(val)
-			i := 0
-			for i < len(kva) {
-				j := i + 1
-				for j < len(kva) && kva[j].Key == kva[i].Key {
-					j++
-				}
-				values := []string{}
-				for k := i; k < j; k++ { // sliding windows
-					values = append(values, kva[k].Value)
-				}
-				output := reducef(kva[i].Key, values)
-
-				// this is the correct format for each line of Reduce output.
-				fmt.Fprintf(tmpFile, "%v %v\n", kva[i].Key, output)
-
-				i = j
+			for key, values := range mapkv {
+				output := reducef(key, values)
+				fmt.Fprintf(tmpFile, "%v %v\n", key, output)
 			}
 
 			os.Rename(tmpFile.Name(), oName)
-			// fmt.Println(oName)
 			tmpFile.Close()
 		}
 
 		args2 := NotifyTaskFinishedArgs{Type: _type, TaskId: taskId}
 		reply2 := NotifyTaskFinishedReply{Done: false}
 
-		// if reply done, break
 		if call("Master.NotifyTaskFinished", &args2, &reply2) == false {
 			break
 		}
-
 	}
 
 
