@@ -6,30 +6,63 @@ package mr
 // remember to capitalize all names.
 //
 
-import "os"
+import (
+	"fmt"
+	"os"
+	"time"
+)
 import "strconv"
 
-//
-// example to show how to declare the arguments
-// and reply for an RPC.
-//
+// enum for task type
+type TaskType int8
+const (
+	MAP TaskType = iota
+	REDUCE
+)
 
-type ExampleArgs struct {
-	X int
+type Task struct {
+	Type TaskType
+	MapFileName string
+	Id string
+	StartTime time.Time
 }
 
-type ExampleReply struct {
-	Y int
+type AskForTaskArgs struct {
+
 }
 
-// Add your RPC definitions here.
-type TaskArgs struct {
-	CurrTask Task
+type AskForTaskReply struct {
+	Type TaskType
+	MapFileName string
+	NMap int
+	NReduce int
+	TaskId string
 }
 
-type TaskReply struct {
-	CurrTask Task // capitalized to become exported field
+type NotifyTaskFinishedArgs struct {
+	Type TaskType
+	TaskId string
 }
+
+type NotifyTaskFinishedReply struct {
+	Done bool
+}
+
+// utils function
+
+func GetTaskName(taskType TaskType, taskId string) string {
+	// to generate the task name used in RunningTasks
+	return fmt.Sprintf("task-%v-%v", taskType, taskId)
+}
+
+func GetMapTempName(mapId string, reduceId string) string {
+	return fmt.Sprintf("mr-%v-%v", mapId, reduceId)
+}
+
+func GetOutputName(reduceId string) string {
+	return fmt.Sprintf("mr-out-%v", reduceId)
+}
+
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the master.
 // Can't use the current directory since
